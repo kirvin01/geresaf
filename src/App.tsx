@@ -2,11 +2,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { 
     TextField, Button, Modal, Box, Typography, Container, Paper, Grid, 
-    Select, MenuItem, FormControl, InputLabel, Divider, CircularProgress, 
+    Select, MenuItem, FormControl, InputLabel, CircularProgress, 
     Alert, IconButton, InputAdornment
 } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
-import type { GridColDef, GridRowParams, GridPaginationModel } from '@mui/x-data-grid';
+import { esES } from '@mui/x-data-grid/locales';
+import type { GridColDef, GridRowParams } from '@mui/x-data-grid';
 import CloseIcon from '@mui/icons-material/Close';
 import SearchIcon from '@mui/icons-material/Search';
 import PersonIcon from '@mui/icons-material/Person';
@@ -19,23 +20,27 @@ interface NotificationState { key: number; severity: 'error' | 'info'; message: 
 
 // --- Definiciones de Columnas ---
 const columnsPacientes: GridColDef[] = [
-    { field: 'Abrev_Tipo_Doc', headerName: 'Tipo Doc', width: 90, sortable: false },
-    { field: 'Numero_Documento', headerName: 'N° Documento', width: 130, sortable: false },
-    { field: 'Fecha_Nacimiento', headerName: 'Fec. Nacimiento', width: 130, sortable: false },
-    { field: 'Genero', headerName: 'Género', width: 90, sortable: false },
-    { field: 'EDAD', headerName: 'Edad', type: 'number', width: 80, sortable: false },
+    { field: 'Abrev_Tipo_Doc', headerName: 'Tipo Doc', flex: 1, minWidth: 80, sortable: false, headerAlign: 'center', align: 'center' },
+    { field: 'Numero_Documento', headerName: 'N° Documento', flex: 1, minWidth: 120, sortable: false, headerAlign: 'center', align: 'center' },
+    { field: 'Fecha_Nacimiento', headerName: 'Fec. Nacimiento', flex: 1, minWidth: 120, sortable: false, headerAlign: 'center', align: 'center' },
+    { field: 'Genero', headerName: 'Género', flex: 1, minWidth: 80, sortable: false, headerAlign: 'center', align: 'center' },
+    { field: 'EDAD', headerName: 'Edad', type: 'number', flex: 1, minWidth: 70, sortable: false, headerAlign: 'center', align: 'center' },
 ];
 
 const columnsAtenciones: GridColDef[] = [
     { field: 'Id_Cita', headerName: 'ID Cita', width: 90, sortable: false },
-    { field: 'FECHA_ATENCION', headerName: 'Fecha Atención', width: 140, sortable: false },
+    { field: 'FECHA_ATENCION', headerName: 'F. Atención', width: 140, sortable: false },
     { field: 'T_DIAG', headerName: 'T. Diag', width: 80, sortable: false },
     { field: 'Codigo_Item', headerName: 'Código', width: 100, sortable: false },
-    { field: 'Descripcion_Item', headerName: 'Descripción', flex: 1, minWidth: 180, sortable: false },
+    { field: 'Descripcion_Item', headerName: 'Descripción', flex: 1, minWidth: 250, sortable: false },
     { field: 'LAB1', headerName: 'Lab 1', width: 70, sortable: false },
     { field: 'LAB2', headerName: 'Lab 2', width: 70, sortable: false },
     { field: 'LAB3', headerName: 'Lab 3', width: 70, sortable: false },
-    { field: 'ESTABLECIMIENTO', headerName: 'Establecimiento', flex: 1, minWidth: 160, sortable: false },
+    { field: 'F_REGISTRO', headerName: 'F. Registro', width: 150, sortable: false },
+    { field: 'F_MODIFICACION', headerName: 'F. Modificación', width: 150, sortable: false },
+    { field: 'ESTABLECIMIENTO', headerName: 'Establecimiento', flex: 1, minWidth: 200, sortable: false },
+    { field: 'DISTRITO', headerName: 'Distrito', width: 150, sortable: false },
+    { field: 'POVINCIA', headerName: 'Provincia', width: 150, sortable: false },
 ];
 
 // --- Componente Principal ---
@@ -136,7 +141,10 @@ function App() {
                         columns={columnsPacientes} 
                         loading={loadingPacientes}
                         onRowDoubleClick={handleRowDoubleClick} 
-                        autoPageSize
+                        autoHeight
+                        disableColumnMenu
+                        disableColumnSelector
+                        localeText={esES.components.MuiDataGrid.defaultProps.localeText}
                     />
                 </Box>
             </Paper>
@@ -147,13 +155,13 @@ function App() {
                     <Typography variant="h6" component="h2" sx={{ mb: 2 }}>Detalle de Atenciones</Typography>
                     <Paper variant="outlined" sx={{ p: 1.5, mb: 1 }}>
                         <Grid container spacing={2} alignItems="center">
-                            <Grid xs={12} sm={5} sx={styles.infoItem}><PersonIcon sx={{ mr: 1, color: 'primary.main' }} /><Typography variant="body2"><b>Paciente:</b> {selectedPaciente && `${selectedPaciente.Abrev_Tipo_Doc}: ${selectedPaciente.Numero_Documento}`}</Typography></Grid>
-                            <Grid xs={12} sm={4}><TextField fullWidth label="Buscar por Código Item" variant="standard" value={filtroCodigo} onChange={(e) => setFiltroCodigo(e.target.value)} InputProps={{ startAdornment: (<InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>)}} /></Grid>
-                            <Grid xs={12} sm={3}><FormControl fullWidth size="small"><InputLabel>Año</InputLabel><Select value={selectedAnio} label="Año" onChange={(e) => setSelectedAnio(e.target.value as number)}>{anios.map(anio => <MenuItem key={anio} value={anio}>{anio}</MenuItem>)}</Select></FormControl></Grid>
+                            <Grid item xs={12} sm={5} sx={styles.infoItem}><PersonIcon sx={{ mr: 1, color: 'primary.main' }} /><Typography variant="body2"><b>Paciente:</b> {selectedPaciente && `${selectedPaciente.Abrev_Tipo_Doc}: ${selectedPaciente.Numero_Documento}`}</Typography></Grid>
+                            <Grid item xs={12} sm={4}><TextField fullWidth label="Buscar por Código Item" variant="standard" value={filtroCodigo} onChange={(e) => setFiltroCodigo(e.target.value)} InputProps={{ startAdornment: (<InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>)}} /></Grid>
+                            <Grid item xs={12} sm={3}><FormControl fullWidth size="small"><InputLabel>Año</InputLabel><Select value={selectedAnio} label="Año" onChange={(e) => setSelectedAnio(e.target.value as number)}>{anios.map(anio => <MenuItem key={anio} value={anio}>{anio}</MenuItem>)}</Select></FormControl></Grid>
                         </Grid>
                     </Paper>
                     {notification && <Alert key={notification.key} severity={notification.severity} sx={{ mb: 1 }}>{notification.message}</Alert>}
-                    <Box sx={{ height: 450, width: '100%' }}>
+                    <Box sx={{ height: 600, width: '100%' }}>
                         {loadingAtenciones ? <Box sx={styles.centerFlex}><CircularProgress /></Box> : <DataGrid 
                             rows={filteredAtenciones} 
                             columns={columnsAtenciones} 
@@ -161,6 +169,7 @@ function App() {
                             density="compact" 
                             sx={styles.dataGrid} 
                             paginationMode="client" // Forzar paginación del lado del cliente
+                            localeText={esES.components.MuiDataGrid.defaultProps.localeText}
                         />}
                     </Box>
                     <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}><Button variant="outlined" color="primary" onClick={handleCloseModal}>Cerrar</Button></Box>

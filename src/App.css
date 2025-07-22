@@ -1,1 +1,12 @@
 /* Los estilos ahora se manejan directamente en el componente App.tsx con MUI */
+
+.MuiDataGrid-columnHeaders {
+  background-color: #e0e0e0; /* Un gris claro para las cabeceras */
+}
+
+.MuiDataGrid-columnHeaderTitle {
+  font-weight: bold;
+}
+.css-jj6133 {
+      width: 600px  !important;
+}
