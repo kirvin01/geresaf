@@ -65,7 +65,7 @@ function App() {
         setNotification(null);
         setPacientes([]);
         try {
-            const response = await fetch(`http://127.0.0.1:8000/paciente?ndoc=${ndoc}`);
+            const response = await fetch(`http://192.168.0.83:8000/paciente?ndoc=${ndoc}`);
             if (!response.ok) throw new Error('Error del servidor');
             const data = await response.json(); // Espera { result: [] }
             const pacientesData = data.result || [];
@@ -85,7 +85,7 @@ function App() {
         setLoadingAtenciones(true);
         try {
             // Nota: Tu backend de atenciones no usa skip/limit, por lo que no se envían aquí.
-            const response = await fetch(`http://127.0.0.1:8000/atenciones?anio=${selectedAnio}&ndoc=${selectedPaciente.Numero_Documento}`);
+            const response = await fetch(`http://192.168.0.83:8000/atenciones?anio=${selectedAnio}&ndoc=${selectedPaciente.Numero_Documento}`);
             if (!response.ok) throw new Error('Error del servidor');
             const data = await response.json(); // Espera { result: [] }
             const atencionesData = data.result || [];
