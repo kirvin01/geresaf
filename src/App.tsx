@@ -11,11 +11,28 @@ import type { GridColDef, GridRowParams } from '@mui/x-data-grid';
 import CloseIcon from '@mui/icons-material/Close';
 import SearchIcon from '@mui/icons-material/Search';
 import PersonIcon from '@mui/icons-material/Person';
+import { API_CONFIG } from './config';
 import './App.css';
 
 // --- Interfaces de Tipos ---
 interface Paciente { Abrev_Tipo_Doc: string; Numero_Documento: string; Fecha_Nacimiento: string; Genero: string; EDAD: number; id: string; }
-interface Atencion { Id_Cita: number; FECHA_ATENCION: string; T_DIAG: string; Codigo_Item: string; Descripcion_Item: string; LAB1: string; LAB2: string; LAB3: string; F_REGISTRO: string; F_MODIFICACION: string; ESTABLECIMIENTO: string; DISTRITO: string; POVINCIA: string; id: string; }
+interface Atencion {
+    N: string;
+    Id_Cita: string;
+    F_ATENCION: string;
+    Codigo_Item: string;
+    Descripcion_Item: string;
+    LAB1: string;
+    LAB2: string;
+    LAB3: string;
+    F_REGISTRO: string;
+    F_MODIFICACION: string | null;
+    ESTABLECIMIENTO: string;
+    'DISTRITO | PROVINCIA': string;
+    SISTEMA: string | null;
+    REGISTRADOR: string;
+    id: string;
+}
 interface NotificationState { key: number; severity: 'error' | 'info'; message: string; }
 
 // --- Definiciones de Columnas ---
@@ -28,19 +45,20 @@ const columnsPacientes: GridColDef[] = [
 ];
 
 const columnsAtenciones: GridColDef[] = [
+    { field: 'N', headerName: 'N', width: 3, sortable: false },
     { field: 'Id_Cita', headerName: 'ID Cita', width: 90, sortable: false },
-    { field: 'FECHA_ATENCION', headerName: 'F. Atención', width: 140, sortable: false },
-    { field: 'T_DIAG', headerName: 'T. Diag', width: 80, sortable: false },
+    { field: 'F_ATENCION', headerName: 'F. Atención', width: 100, sortable: false },
     { field: 'Codigo_Item', headerName: 'Código', width: 100, sortable: false },
     { field: 'Descripcion_Item', headerName: 'Descripción', flex: 1, minWidth: 250, sortable: false },
-    { field: 'LAB1', headerName: 'Lab 1', width: 70, sortable: false },
-    { field: 'LAB2', headerName: 'Lab 2', width: 70, sortable: false },
-    { field: 'LAB3', headerName: 'Lab 3', width: 70, sortable: false },
+    { field: 'LAB1', headerName: 'Lab 1', width: 50, sortable: false },
+    { field: 'LAB2', headerName: 'Lab 2', width: 50, sortable: false },
+    { field: 'LAB3', headerName: 'Lab 3', width: 50, sortable: false },
     { field: 'F_REGISTRO', headerName: 'F. Registro', width: 150, sortable: false },
     { field: 'F_MODIFICACION', headerName: 'F. Modificación', width: 150, sortable: false },
     { field: 'ESTABLECIMIENTO', headerName: 'Establecimiento', flex: 1, minWidth: 200, sortable: false },
-    { field: 'DISTRITO', headerName: 'Distrito', width: 150, sortable: false },
-    { field: 'POVINCIA', headerName: 'Provincia', width: 150, sortable: false },
+    { field: 'DISTRITO | PROVINCIA', headerName: 'Distrito | Provincia', width: 200, sortable: false },
+    { field: 'SISTEMA', headerName: 'Sistema', width: 120, sortable: false },
+    { field: 'REGISTRADOR', headerName: 'Registrador', width: 200, sortable: false },
 ];
 
 // --- Componente Principal ---
@@ -65,7 +83,7 @@ function App() {
         setNotification(null);
         setPacientes([]);
         try {
-            const response = await fetch(`http://192.168.0.83:8000/paciente?ndoc=${ndoc}`);
+            const response = await fetch(`${API_CONFIG.baseURL}/paciente?ndoc=${ndoc}`);
             if (!response.ok) throw new Error('Error del servidor');
             const data = await response.json(); // Espera { result: [] }
             const pacientesData = data.result || [];
@@ -84,14 +102,16 @@ function App() {
         if (!selectedPaciente) return;
         setLoadingAtenciones(true);
         try {
-            // Nota: Tu backend de atenciones no usa skip/limit, por lo que no se envían aquí.
-            const response = await fetch(`http://192.168.0.83:8000/atenciones?anio=${selectedAnio}&ndoc=${selectedPaciente.Numero_Documento}`);
+            const params = new URLSearchParams({
+                anio: selectedAnio.toString(),
+                ndoc: selectedPaciente.Numero_Documento,
+            });
+            const response = await fetch(`${API_CONFIG.baseURL}/atenciones?${params.toString()}`);
             if (!response.ok) throw new Error('Error del servidor');
             const data = await response.json(); // Espera { result: [] }
             const atencionesData = data.result || [];
             setAtenciones(atencionesData.map((a: Atencion) => ({ ...a, id: `${a.Id_Cita}-${a.Codigo_Item}` })));
             if (atencionesData.length === 0) {
-                // Solo muestra notificación si no hay filtro de código activo
                 if (!filtroCodigo) {
                     setNotification({ key: Date.now(), severity: 'info', message: `No hay atenciones registradas para el año ${selectedAnio}.` });
                 }
@@ -102,7 +122,7 @@ function App() {
         } finally {
             setLoadingAtenciones(false);
         }
-    }, [selectedPaciente, selectedAnio, filtroCodigo]); // Dependencia de filtroCodigo para que se actualice la notificación
+    }, [selectedPaciente, selectedAnio, filtroCodigo]);
 
     useEffect(() => {
         if (modalOpen) {
@@ -117,13 +137,13 @@ function App() {
 
     const handleRowDoubleClick = (params: GridRowParams) => {
         setSelectedPaciente(params.row as Paciente);
-        setSelectedAnio(new Date().getFullYear()); // Resetear año al abrir modal
-        setFiltroCodigo(''); // Limpiar filtro de código al abrir modal
+        setSelectedAnio(new Date().getFullYear());
+        setFiltroCodigo('');
         setModalOpen(true);
     };
 
     const handleCloseModal = () => setModalOpen(false);
-
+    
     const filteredAtenciones = atenciones.filter(a => a.Codigo_Item.toLowerCase().includes(filtroCodigo.toLowerCase()));
 
     return (
@@ -165,10 +185,13 @@ function App() {
                         {loadingAtenciones ? <Box sx={styles.centerFlex}><CircularProgress /></Box> : <DataGrid 
                             rows={filteredAtenciones} 
                             columns={columnsAtenciones} 
-                            autoPageSize 
+                            initialState={{
+                                pagination: {
+                                    pageSize: 13,
+                                },
+                            }}
                             density="compact" 
                             sx={styles.dataGrid} 
-                            paginationMode="client" // Forzar paginación del lado del cliente
                             localeText={esES.components.MuiDataGrid.defaultProps.localeText}
                         />}
                     </Box>
