@@ -36,14 +36,6 @@ interface Atencion {
 interface NotificationState { key: number; severity: 'error' | 'info'; message: string; }
 
 // --- Definiciones de Columnas ---
-const columnsPacientes: GridColDef[] = [
-    { field: 'Abrev_Tipo_Doc', headerName: 'Tipo Doc', flex: 1, minWidth: 80, sortable: false, headerAlign: 'center', align: 'center' },
-    { field: 'Numero_Documento', headerName: 'N° Documento', flex: 1, minWidth: 120, sortable: false, headerAlign: 'center', align: 'center' },
-    { field: 'Fecha_Nacimiento', headerName: 'Fec. Nacimiento', flex: 1, minWidth: 120, sortable: false, headerAlign: 'center', align: 'center' },
-    { field: 'Genero', headerName: 'Género', flex: 1, minWidth: 80, sortable: false, headerAlign: 'center', align: 'center' },
-    { field: 'EDAD', headerName: 'Edad', type: 'number', flex: 1, minWidth: 70, sortable: false, headerAlign: 'center', align: 'center' },
-];
-
 const columnsAtenciones: GridColDef[] = [
     { field: 'N', headerName: 'N', width: 3, sortable: false },
     { field: 'Id_Cita', headerName: 'ID Cita', width: 90, sortable: false },
@@ -74,6 +66,7 @@ function App() {
     const [loadingAtenciones, setLoadingAtenciones] = useState(false);
     const [selectedAnio, setSelectedAnio] = useState<number>(new Date().getFullYear());
     const [filtroCodigo, setFiltroCodigo] = useState('');
+    const [atencionesPageSize, setAtencionesPageSize] = useState(13);
 
     const anios = Array.from({ length: 3 }, (_, i) => new Date().getFullYear() - i);
 
@@ -146,6 +139,32 @@ function App() {
     
     const filteredAtenciones = atenciones.filter(a => a.Codigo_Item.toLowerCase().includes(filtroCodigo.toLowerCase()));
 
+    const columnsPacientes: GridColDef[] = [
+        { field: 'Abrev_Tipo_Doc', headerName: 'Tipo Doc', flex: 1, minWidth: 80, sortable: false, headerAlign: 'center', align: 'center' },
+        { field: 'Numero_Documento', headerName: 'N° Documento', flex: 1, minWidth: 120, sortable: false, headerAlign: 'center', align: 'center' },
+        { field: 'Fecha_Nacimiento', headerName: 'Fec. Nacimiento', flex: 1, minWidth: 120, sortable: false, headerAlign: 'center', align: 'center' },
+        { field: 'Genero', headerName: 'Género', flex: 1, minWidth: 80, sortable: false, headerAlign: 'center', align: 'center' },
+        { field: 'EDAD', headerName: 'Edad', type: 'number', flex: 1, minWidth: 70, sortable: false, headerAlign: 'center', align: 'center' },
+        {
+            field: 'actions',
+            headerName: 'Acciones',
+            sortable: false,
+            headerAlign: 'center',
+            align: 'center',
+            flex: 1,
+            minWidth: 120,
+            renderCell: (params: GridRowParams) => (
+                <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={() => handleRowDoubleClick(params)}
+                >
+                    Detalles
+                </Button>
+            )
+        }
+    ];
+
     return (
         <Container className="App" maxWidth="lg">
             <Paper elevation={3} sx={{ padding: '2rem', borderRadius: '15px' }}>
@@ -164,6 +183,8 @@ function App() {
                         autoHeight
                         disableColumnMenu
                         disableColumnSelector
+                        pageSize={5}
+                        rowsPerPageOptions={[5, 10, 20]}
                         localeText={esES.components.MuiDataGrid.defaultProps.localeText}
                     />
                 </Box>
@@ -185,11 +206,9 @@ function App() {
                         {loadingAtenciones ? <Box sx={styles.centerFlex}><CircularProgress /></Box> : <DataGrid 
                             rows={filteredAtenciones} 
                             columns={columnsAtenciones} 
-                            initialState={{
-                                pagination: {
-                                    pageSize: 13,
-                                },
-                            }}
+                            pageSize={atencionesPageSize}
+                            onPageSizeChange={(newPageSize) => setAtencionesPageSize(newPageSize)}
+                            rowsPerPageOptions={[13, 25, 50]}
                             density="compact" 
                             sx={styles.dataGrid} 
                             localeText={esES.components.MuiDataGrid.defaultProps.localeText}
