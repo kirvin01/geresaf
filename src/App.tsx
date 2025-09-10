@@ -7,7 +7,7 @@ import {
 } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import { esES } from '@mui/x-data-grid/locales';
-import type { GridColDef, GridRowParams } from '@mui/x-data-grid';
+import type { GridColDef, GridRenderCellParams, GridRowParams } from '@mui/x-data-grid';
 import CloseIcon from '@mui/icons-material/Close';
 import SearchIcon from '@mui/icons-material/Search';
 import PersonIcon from '@mui/icons-material/Person';
@@ -128,7 +128,7 @@ function App() {
         handleSearchPacientes();
     };
 
-    const handleRowDoubleClick = (params: GridRowParams) => {
+    const handleRowDoubleClick = (params: GridRowParams | GridRenderCellParams) => {
         setSelectedPaciente(params.row as Paciente);
         setSelectedAnio(new Date().getFullYear());
         setFiltroCodigo('');
@@ -153,7 +153,7 @@ function App() {
             align: 'center',
             flex: 1,
             minWidth: 120,
-            renderCell: (params: GridRowParams) => (
+            renderCell: (params: GridRenderCellParams) => (
                 <Button
                     variant="contained"
                     color="primary"
