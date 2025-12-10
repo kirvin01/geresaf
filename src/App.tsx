@@ -1,8 +1,8 @@
 
-import { useState, useEffect, useCallback } from 'react';
-import { 
-    TextField, Button, Modal, Box, Typography, Container, Paper, Grid, 
-    Select, MenuItem, FormControl, InputLabel, CircularProgress, 
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import {
+    TextField, Button, Modal, Box, Typography, Container, Paper, Grid,
+    Select, MenuItem, FormControl, InputLabel, CircularProgress,
     Alert, IconButton, InputAdornment
 } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
@@ -80,7 +80,7 @@ function App() {
             if (!response.ok) throw new Error('Error del servidor');
             const data = await response.json(); // Espera { result: [] }
             const pacientesData = data.result || [];
-            setPacientes(pacientesData.map((p: Paciente) => ({ ...p, id: p.Numero_Documento })));
+            setPacientes(pacientesData.map((p: Paciente, index: number) => ({ ...p, id: `${p.Numero_Documento}-${p.Abrev_Tipo_Doc}-${index}` })));
             if (pacientesData.length === 0) {
                 setNotification({ key: Date.now(), severity: 'info', message: 'No se encontraron pacientes.' });
             }
@@ -128,18 +128,18 @@ function App() {
         handleSearchPacientes();
     };
 
-    const handleRowDoubleClick = (params: GridRowParams | GridRenderCellParams) => {
+    const handleRowDoubleClick = useCallback((params: GridRowParams | GridRenderCellParams) => {
         setSelectedPaciente(params.row as Paciente);
         setSelectedAnio(new Date().getFullYear());
         setFiltroCodigo('');
         setModalOpen(true);
-    };
+    }, []);
 
     const handleCloseModal = () => setModalOpen(false);
-    
+
     const filteredAtenciones = atenciones.filter(a => a.Codigo_Item.toLowerCase().includes(filtroCodigo.toLowerCase()));
 
-    const columnsPacientes: GridColDef[] = [
+    const columnsPacientes: GridColDef[] = useMemo(() => [
         { field: 'Abrev_Tipo_Doc', headerName: 'Tipo Doc', flex: 1, minWidth: 80, sortable: false, headerAlign: 'center', align: 'center' },
         { field: 'Numero_Documento', headerName: 'N° Documento', flex: 1, minWidth: 120, sortable: false, headerAlign: 'center', align: 'center' },
         { field: 'Fecha_Nacimiento', headerName: 'Fec. Nacimiento', flex: 1, minWidth: 120, sortable: false, headerAlign: 'center', align: 'center' },
@@ -163,7 +163,7 @@ function App() {
                 </Button>
             )
         }
-    ];
+    ], [handleRowDoubleClick]);
 
     return (
         <Container className="App" maxWidth="lg">
@@ -171,15 +171,15 @@ function App() {
                 <Typography variant="h4" component="h1" gutterBottom>Búsqueda de Pacientes</Typography>
                 <Box component="form" onSubmit={handleSearchSubmit} sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                     <TextField fullWidth label="Número de Documento" variant="outlined" value={ndoc} onChange={(e) => setNdoc(e.target.value)} />
-                    <Button type="submit" variant="contained" startIcon={<SearchIcon />} sx={{ ml: 2, height: '56px', flexShrink: 0 }}>Buscar</Button>
+                    <Button type="submit" variant="contained" startIcon={<SearchIcon />} disabled={loadingPacientes} sx={{ ml: 2, height: '56px', flexShrink: 0 }}>{loadingPacientes ? 'Buscando...' : 'Buscar'}</Button>
                 </Box>
                 {notification && <Alert key={notification.key} severity={notification.severity} sx={{ mb: 2 }}>{notification.message}</Alert>}
                 <Box sx={{ height: 400, width: '100%' }}>
-                    <DataGrid 
-                        rows={pacientes} 
-                        columns={columnsPacientes} 
+                    <DataGrid
+                        rows={pacientes}
+                        columns={columnsPacientes}
                         loading={loadingPacientes}
-                        onRowDoubleClick={handleRowDoubleClick} 
+                        onRowDoubleClick={handleRowDoubleClick}
                         autoHeight
                         disableColumnMenu
                         disableColumnSelector
@@ -197,20 +197,20 @@ function App() {
                     <Paper variant="outlined" sx={{ p: 1.5, mb: 1 }}>
                         <Grid container spacing={2} alignItems="center">
                             <Grid item xs={12} sm={5} sx={styles.infoItem}><PersonIcon sx={{ mr: 1, color: 'primary.main' }} /><Typography variant="body2"><b>Paciente:</b> {selectedPaciente && `${selectedPaciente.Abrev_Tipo_Doc}: ${selectedPaciente.Numero_Documento}`}</Typography></Grid>
-                            <Grid item xs={12} sm={4}><TextField fullWidth label="Buscar por Código Item" variant="standard" value={filtroCodigo} onChange={(e) => setFiltroCodigo(e.target.value)} InputProps={{ startAdornment: (<InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>)}} /></Grid>
+                            <Grid item xs={12} sm={4}><TextField fullWidth label="Buscar por Código Item" variant="standard" value={filtroCodigo} onChange={(e) => setFiltroCodigo(e.target.value)} InputProps={{ startAdornment: (<InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>) }} /></Grid>
                             <Grid item xs={12} sm={3}><FormControl fullWidth size="small"><InputLabel>Año</InputLabel><Select value={selectedAnio} label="Año" onChange={(e) => setSelectedAnio(e.target.value as number)}>{anios.map(anio => <MenuItem key={anio} value={anio}>{anio}</MenuItem>)}</Select></FormControl></Grid>
                         </Grid>
                     </Paper>
                     {notification && <Alert key={notification.key} severity={notification.severity} sx={{ mb: 1 }}>{notification.message}</Alert>}
                     <Box sx={{ height: 600, width: '100%' }}>
-                        {loadingAtenciones ? <Box sx={styles.centerFlex}><CircularProgress /></Box> : <DataGrid 
-                            rows={filteredAtenciones} 
-                            columns={columnsAtenciones} 
+                        {loadingAtenciones ? <Box sx={styles.centerFlex}><CircularProgress /></Box> : <DataGrid
+                            rows={filteredAtenciones}
+                            columns={columnsAtenciones}
                             pageSize={atencionesPageSize}
                             onPageSizeChange={(newPageSize) => setAtencionesPageSize(newPageSize)}
                             rowsPerPageOptions={[13, 25, 50]}
-                            density="compact" 
-                            sx={styles.dataGrid} 
+                            density="compact"
+                            sx={styles.dataGrid}
                             localeText={esES.components.MuiDataGrid.defaultProps.localeText}
                         />}
                     </Box>
@@ -221,7 +221,7 @@ function App() {
     );
 }
 
-const styles = { 
+const styles = {
     modalStyle: {
         position: 'absolute',
         top: '50%',
@@ -239,6 +239,6 @@ const styles = {
     infoItem: { display: 'flex', alignItems: 'center' },
     centerFlex: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' },
     dataGrid: { '& .MuiDataGrid-columnHeaderTitle': { fontSize: '0.8rem' }, '& .MuiDataGrid-cell': { fontSize: '0.75rem' } }
- };
+};
 
 export default App;
