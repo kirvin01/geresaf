@@ -71,71 +71,83 @@ function App() {
     const anios = Array.from({ length: 3 }, (_, i) => new Date().getFullYear() - i);
 
     const handleSearchPacientes = async () => {
-        if (!ndoc) return;
+        if (loadingPacientes || !ndoc) return;
         setLoadingPacientes(true);
         setNotification(null);
         setPacientes([]);
         try {
             const response = await fetch(`${API_CONFIG.baseURL}/paciente?ndoc=${ndoc}`);
             if (!response.ok) throw new Error('Error del servidor');
-            const data = await response.json(); // Espera { result: [] }
+            const data = await response.json();
             const pacientesData = data.result || [];
-            setPacientes(pacientesData.map((p: Paciente, index: number) => ({ ...p, id: `${p.Numero_Documento}-${p.Abrev_Tipo_Doc}-${index}` })));
+            setPacientes(pacientesData.map((p: Paciente, index: number) => ({
+                ...p,
+                id: `${p.Numero_Documento}-${p.Abrev_Tipo_Doc}-${index}`
+            })));
             if (pacientesData.length === 0) {
                 setNotification({ key: Date.now(), severity: 'info', message: 'No se encontraron pacientes.' });
             }
         } catch (error) {
-            setNotification({ key: Date.now(), severity: 'error', message: 'No se pudo conectar con el servidor. Verifique la API y la configuración de CORS.' });
+            setNotification({ key: Date.now(), severity: 'error', message: 'Error de conexión.' });
         } finally {
             setLoadingPacientes(false);
         }
     };
 
-    const fetchAtenciones = useCallback(async () => {
+    const fetchAtenciones = useCallback(async (signal?: AbortSignal) => {
         if (!selectedPaciente) return;
+
         setLoadingAtenciones(true);
         try {
             const params = new URLSearchParams({
                 anio: selectedAnio.toString(),
                 ndoc: selectedPaciente.Numero_Documento,
             });
-            const response = await fetch(`${API_CONFIG.baseURL}/atenciones?${params.toString()}`);
+
+            const response = await fetch(`${API_CONFIG.baseURL}/atenciones?${params.toString()}`, { signal });
+
             if (!response.ok) throw new Error('Error del servidor');
-            const data = await response.json(); // Espera { result: [] }
+            const data = await response.json();
             const atencionesData = data.result || [];
-            setAtenciones(atencionesData.map((a: Atencion) => ({ ...a, id: `${a.Id_Cita}-${a.Codigo_Item}` })));
-            if (atencionesData.length === 0) {
-                if (!filtroCodigo) {
-                    setNotification({ key: Date.now(), severity: 'info', message: `No hay atenciones registradas para el año ${selectedAnio}.` });
-                }
+
+            setAtenciones(atencionesData.map((a: Atencion) => ({
+                ...a,
+                id: `${a.Id_Cita}-${a.Codigo_Item}`
+            })));
+
+            if (atencionesData.length === 0 && !filtroCodigo) {
+                setNotification({ key: Date.now(), severity: 'info', message: `Sin atenciones en ${selectedAnio}.` });
             }
-        } catch (error) {
-            console.error("Error al buscar atenciones:", error);
-            setNotification({ key: Date.now(), severity: 'error', message: 'No se pudo cargar las atenciones. Verifique la conexión.' });
+        } catch (error: any) {
+            if (error.name === 'AbortError') return; // Ignorar si fue cancelada intencionalmente
+            setNotification({ key: Date.now(), severity: 'error', message: 'Error al cargar atenciones.' });
         } finally {
             setLoadingAtenciones(false);
         }
     }, [selectedPaciente, selectedAnio, filtroCodigo]);
 
+
     useEffect(() => {
-        if (modalOpen) {
-            fetchAtenciones();
+        const controller = new AbortController();
+
+        if (modalOpen && selectedPaciente) {
+            fetchAtenciones(controller.signal);
         }
-    }, [modalOpen, fetchAtenciones]);
 
-    const handleSearchSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        handleSearchPacientes();
-    };
-
+        return () => controller.abort();
+    }, [modalOpen, selectedAnio, selectedPaciente, fetchAtenciones]);
     const handleRowDoubleClick = useCallback((params: GridRowParams | GridRenderCellParams) => {
+        if (loadingAtenciones) return;
         setSelectedPaciente(params.row as Paciente);
         setSelectedAnio(new Date().getFullYear());
         setFiltroCodigo('');
         setModalOpen(true);
-    }, []);
+    }, [loadingAtenciones]);
 
-    const handleCloseModal = () => setModalOpen(false);
+    const handleCloseModal = () => {
+        setModalOpen(false);
+        setAtenciones([]);
+    };
 
     const filteredAtenciones = atenciones.filter(a => a.Codigo_Item.toLowerCase().includes(filtroCodigo.toLowerCase()));
 
@@ -157,24 +169,40 @@ function App() {
                 <Button
                     variant="contained"
                     color="primary"
+                    disabled={loadingAtenciones}
                     onClick={() => handleRowDoubleClick(params)}
                 >
-                    Detalles
+                    {loadingAtenciones && selectedPaciente?.Numero_Documento === params.row.Numero_Documento ? 'Cargando...' : 'Detalles'}
                 </Button>
             )
         }
-    ], [handleRowDoubleClick]);
+    ], [handleRowDoubleClick, loadingAtenciones, selectedPaciente]);
 
     return (
         <Container className="App" maxWidth="lg">
             <Paper elevation={3} sx={{ padding: '2rem', borderRadius: '15px' }}>
                 <Typography variant="h4" component="h1" gutterBottom>Búsqueda de Pacientes</Typography>
-                <Box component="form" onSubmit={handleSearchSubmit} sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <TextField fullWidth label="Número de Documento" variant="outlined" value={ndoc} onChange={(e) => setNdoc(e.target.value)} />
-                    <Button type="submit" variant="contained" startIcon={<SearchIcon />} disabled={loadingPacientes} sx={{ ml: 2, height: '56px', flexShrink: 0 }}>{loadingPacientes ? 'Buscando...' : 'Buscar'}</Button>
+                <Box component="form"
+                    onSubmit={(e) => { e.preventDefault(); handleSearchPacientes(); }}
+                    sx={{ display: 'flex', gap: 2, mb: 4, maxWidth: '800px', mx: 'auto' }}
+                >
+                    <TextField
+                        fullWidth
+                        label="Número de Documento"
+                        value={ndoc}
+                        onChange={(e) => setNdoc(e.target.value)}
+                    />
+                    <Button
+                        type="submit"
+                        variant="contained"
+                        disabled={loadingPacientes || !ndoc}
+                        sx={{ minWidth: '150px', height: '56px' }}
+                    >
+                        {loadingPacientes ? <CircularProgress size={24} color="inherit" /> : 'BUSCAR'}
+                    </Button>
                 </Box>
                 {notification && <Alert key={notification.key} severity={notification.severity} sx={{ mb: 2 }}>{notification.message}</Alert>}
-                <Box sx={{ height: 400, width: '100%' }}>
+                <Box sx={{ height: 450, width: '100%' }}>
                     <DataGrid
                         rows={pacientes}
                         columns={columnsPacientes}
