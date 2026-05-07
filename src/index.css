@@ -6,13 +6,11 @@ html, body, #root {
 }
 
 body {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: #f0f2f5; /* Un fondo suave para mejorar el contraste */
+  background-color: #f0f2f5;
 }
 
-/* Aseguramos que el contenido principal no se estire innecesariamente */
 #root {
-  max-width: 100%;
+  width: 80%;
+  min-height: 80%;
+  margin: 0 auto;
 }
